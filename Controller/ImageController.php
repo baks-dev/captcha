@@ -26,7 +26,10 @@ declare(strict_types=1);
 namespace BaksDev\Captcha\Controller;
 
 
+use BaksDev\Captcha\BaksDevCaptchaBundle;
 use BaksDev\Core\Controller\AbstractController;
+use Random\Randomizer;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -36,70 +39,93 @@ use Symfony\Component\Routing\Attribute\Route;
 #[AsController]
 final class ImageController extends AbstractController
 {
-    #[Route('/image/captcha', name: 'captcha.image', methods: ['GET', 'POST'])]
+    #[Route('/captcha/image', name: 'captcha.image', methods: ['GET', 'POST'])]
     public function index(
+        #[Autowire(env: 'APP_SECRET')] string $SECRET,
         Request $request,
-        int $page = 0,
+
     ): Response
     {
+        $Randomise = new Randomizer();
+
         $Session = $request->getSession();
 
+        $captchaCounter = $request->getClientIp().'captcha_counter';
 
-        // 1. Генерируем код капчи
-        // 1.1. Устанавливаем символы, из которых будет составляться код капчи
-        $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz';
-        // 1.2. Количество символов в капче
-        $length = 6;
+        /** Сбрасываем счетчик неправильного ввода в течении 5 минут */
+        if((time() - $Session->getMetadataBag()->getLastUsed()) > 300)
+        {
+            $Session->remove($captchaCounter);
+        }
 
-        // 1.3. Генерируем код
-        $code = substr(str_shuffle($chars), 0, $length);
+        /** По умолчанию количество цифр - 4 */
+        $length = $Session->get($captchaCounter) ?: 4;
+
+        7 > $length ?: $length = 7;
 
 
-        $Session->set('captcha', crypt($code, 'FYfTQPHtSWXWAa'));
-        $Session->save();
+        $bg = BaksDevCaptchaBundle::PATH.implode(DIRECTORY_SEPARATOR, ['Resources', 'captcha', 'bg'.$Randomise->getInt(0, 7).'.png']);
+        $font = BaksDevCaptchaBundle::PATH.implode(DIRECTORY_SEPARATOR, ['Resources', 'captcha', 'captcha'.$Randomise->getInt(0, 5).'.ttf']);
 
-        //        if (USE_SESSION) {
-        //            // 2a. Используем сессию
-        //            session_start();
-        //            $_SESSION['captcha'] =  crypt($code, '$1$itchief$7');
-        //            session_write_close();
-        //        } else {
-        //            // 2a. Используем куки (время действия 600 секунд)
-        //            $value = crypt($code, '$1$itchief$7');
-        //            $expires = time() + 600;
-        //            setcookie('captcha', $value, $expires, '/', 'test.ru', false, true);
-        //        }
+        $image = imagecreatefrompng($bg);
 
-        // 3. Генерируем изображение
-        // 3.1. Создаем новое изображение из файла
-        $image = imagecreatefrompng(__DIR__.'/files/bg.png');
-        // 3.2 Устанавливаем размер шрифта в пунктах
-        $size = 36;
-        // 3.3. Создаём цвет, который будет использоваться в изображении
-        $color = imagecolorallocate($image, 66, 182, 66);
-        // 3.4. Устанавливаем путь к шрифту
-        $font = __DIR__.'/files//oswald.ttf';
-        // 3.5 Задаём угол в градусах
-        $angle = rand(-10, 10);
-        // 3.6. Устанавливаем координаты точки для первого символа текста
-        $x = 56;
-        $y = 64;
+        $code = '';
 
-        // 3.7. Наносим текст на изображение
-        imagefttext($image, $size, $angle, $x, $y, $color, $font, $code);
+        $x = match (true)
+        {
+            $length === 4 => 50,
+            $length === 5 => 30,
+            $length === 6 => 20,
+            default => 10
+        };
 
+        $gray = imagecolorallocate($image, 200, 200, 200); // цвет по умолчанию
+        $grayKey = $Randomise->getInt(1, $length);
+
+        $chars = '1234567890';
+
+        for($i = 1; $i <= $length; $i++)
+        {
+            $size = $Randomise->getInt(15, 35);
+
+            $chars = $Randomise->shuffleBytes($chars);
+            $char = $Randomise->getBytesFromString($chars, 1);
+
+            $code .= $char;
+
+            $angle = $Randomise->getInt(-30, 30);
+            $y = 50;
+
+            $color = $gray;
+
+            if($grayKey !== $i)
+            {
+                $red = $Randomise->getInt(50, 200);
+                $green = $Randomise->getInt(50, 200);
+                $blue = $Randomise->getInt(50, 200);
+
+                $color = imagecolorallocate($image, $red, $green, $blue);
+
+                if($color === false)
+                {
+                    $color = $gray;
+                }
+            }
+
+            imagefttext($image, $size, $angle, $x, $y, $color, $font, $char);
+
+            $x += $Randomise->getInt(15, 20);
+
+        }
 
         $response = new StreamedResponse(fn() => imagepng($image), 200);
+
+        $Session->set($request->getClientIp().'captcha', crypt($code, $SECRET));
+        $Session->save();
 
         $response->headers->set('Cache-Control', 'no-store, must-revalidate');
         $response->headers->set('Expires', '0');
         $response->headers->set('Content-Type', 'image/png');
-
-        // 3.9. Выводим изображение
-        //imagepng($image);
-
-        // 3.10. Удаляем изображение
-        //imagedestroy($image);
 
         return $response;
 
