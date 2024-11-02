@@ -43,11 +43,8 @@ final class ImageController extends AbstractController
     public function index(
         #[Autowire(env: 'APP_SECRET')] string $SECRET,
         Request $request,
-    ): Response|false
+    ): Response
     {
-
-        // return new Response('Disabled VPN or PROXY');
-
         $Randomise = new Randomizer();
 
         $Session = $request->getSession();
