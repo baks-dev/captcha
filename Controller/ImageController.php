@@ -43,9 +43,11 @@ final class ImageController extends AbstractController
     public function index(
         #[Autowire(env: 'APP_SECRET')] string $SECRET,
         Request $request,
-
-    ): Response
+    ): Response|false
     {
+
+        // return new Response('Disabled VPN or PROXY');
+
         $Randomise = new Randomizer();
 
         $Session = $request->getSession();
@@ -64,8 +66,11 @@ final class ImageController extends AbstractController
         7 > $length ?: $length = 7;
 
 
+        /** Увеличиваем следующую попытку на один */
+
+
         $bg = BaksDevCaptchaBundle::PATH.implode(DIRECTORY_SEPARATOR, ['Resources', 'captcha', 'bg'.$Randomise->getInt(0, 7).'.png']);
-        $font = BaksDevCaptchaBundle::PATH.implode(DIRECTORY_SEPARATOR, ['Resources', 'captcha', 'captcha'.$Randomise->getInt(0, 5).'.ttf']);
+
 
         $image = imagecreatefrompng($bg);
 
@@ -112,9 +117,11 @@ final class ImageController extends AbstractController
                 }
             }
 
+            $font = BaksDevCaptchaBundle::PATH.implode(DIRECTORY_SEPARATOR, ['Resources', 'captcha', 'captcha'.$Randomise->getInt(0, 7).'.ttf']);
+
             imagefttext($image, $size, $angle, $x, $y, $color, $font, $char);
 
-            $x += $Randomise->getInt(15, 20);
+            $x += $Randomise->getInt(17, 20);
 
         }
 
