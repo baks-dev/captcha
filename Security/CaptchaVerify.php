@@ -1,6 +1,6 @@
 <?php
 /*
- *  Copyright 2024.  Baks.dev <admin@baks.dev>
+ *  Copyright 2025.  Baks.dev <admin@baks.dev>
  *  
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@ namespace BaksDev\Captcha\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-final readonly class CaptchaVerify
+final readonly class CaptchaVerify implements CaptchaVerifyInterface
 {
     public function __construct(
         #[Autowire(env: 'APP_SECRET')] private string $SECRET,
