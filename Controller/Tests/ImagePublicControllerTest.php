@@ -26,12 +26,12 @@ declare(strict_types=1);
 namespace BaksDev\Captcha\Controller\Tests;
 
 use BaksDev\Users\User\Tests\TestUserAccount;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DependencyInjection\Attribute\When;
 
-
-/** @group captcha */
 #[When(env: 'test')]
+#[Group('captcha')]
 final class ImagePublicControllerTest extends WebTestCase
 {
     private const string URL = '/captcha/image';
