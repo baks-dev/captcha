@@ -35,8 +35,13 @@ final readonly class CaptchaVerify implements CaptchaVerifyInterface
         private RequestStack $request
     ) {}
 
-    public function verify(string $code): bool
+    public function verify(?string $code): bool
     {
+        if(empty($code))
+        {
+            return false;
+        }
+
         $request = $this->request->getCurrentRequest();
 
         if($request === null)
